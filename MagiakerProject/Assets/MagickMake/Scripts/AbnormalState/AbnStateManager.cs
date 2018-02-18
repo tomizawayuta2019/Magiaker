@@ -8,7 +8,9 @@ public class AbnStateManager : ScriptableObject {
 	//状態異常・属性の管理
 	[SerializeField]
 	public List<AbnState> fire,ice,electric;
-	public GameObject fireObj, iceObj, electricObj;
+	public GameObject fireObj, iceObj, electricObj;//通常用エフェクト
+    public GameObject fireBeamObj, iceBeamObj, electricBeamObj;//ビーム用エフェクト
+    public GameObject fireBomb, iceBomb, electricBomb;//爆発用エフェクト
 	public GameObject[] AbnStateSymbol;
 
 	/// <summary>
@@ -67,17 +69,40 @@ public class AbnStateManager : ScriptableObject {
 	/// </summary>
 	/// <returns>The element prefab.</returns>
 	/// <param name="state">State.</param>
-	public GameObject GetElementPrefab(element ele){
+	public GameObject GetElementPrefab(element ele,BulletType type){
 		GameObject obj;
 		switch (ele) {
 		case element.fire:
-			obj = fireObj;
+                switch (type) {
+                    case BulletType.beam:
+                        obj = fireBeamObj;
+                        break;
+                    default:
+                        obj = fireObj;
+                        break;
+                }
 			break;
 		case element.ice:
-			obj = iceObj;
+                switch (type)
+                {
+                    case BulletType.beam:
+                        obj = iceBeamObj;
+                        break;
+                    default:
+                        obj = iceObj;
+                        break;
+                }
 			break;
 		case element.electric:
-			obj = electricObj;
+                switch (type)
+                {
+                    case BulletType.beam:
+                        obj = electricBeamObj;
+                        break;
+                    default:
+                        obj = electricObj;
+                        break;
+                }
 			break;
 		default:
 			obj = fireObj;
@@ -85,4 +110,22 @@ public class AbnStateManager : ScriptableObject {
 		}
 		return obj;
 	}
+
+    /// <summary>
+    /// 各属性ごとの爆発エフェクト取得
+    /// </summary>
+    /// <param name="element">エフェクトのプレファブ</param>
+    /// <returns></returns>
+    public GameObject GetBombPrefab(element element) {
+        switch (element) {
+            case element.fire:
+                return fireBomb;
+            case element.ice:
+                return iceBomb;
+            case element.electric:
+                return electricBomb;
+            default:
+                return fireBomb;
+        }
+    }
 }

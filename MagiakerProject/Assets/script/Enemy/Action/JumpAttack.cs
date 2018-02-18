@@ -7,10 +7,7 @@ public class JumpAttack : Action
     Rigidbody rb;
     Vector3 targetRot;
     AttackArea Range;
-    [SerializeField]
-    GameObject attackArea;
-    [SerializeField]
-    float RotationSpeed = 10f;      //回転速度
+    
     [SerializeField]
     int AttackRange = 125;          //攻撃開始範囲
     [SerializeField]
@@ -25,14 +22,8 @@ public class JumpAttack : Action
     float AttackStepSpeed = 0.5f;   //攻撃時の移動速度　0.0~1.0の間まで
     [SerializeField]
     float BackStepSpeed = 0.5f;     //後退時の移動速度　0.0~1.0の間まで
-    [SerializeField]
-    float Damage = 10;              //ダメージ量
 
     float TargetDistance;
-
-    bool SearchAction = true;
-    void SetSearchAction(bool set) { SearchAction = set; }
-    bool GetSearchAction() { return SearchAction; }
 
     bool PlayerTouch = false;
     void SetPlayerTouch(bool set) { PlayerTouch = set; }
@@ -52,7 +43,7 @@ public class JumpAttack : Action
         Range = attackArea.GetComponent<AttackArea>();
         Range.aligment = aligment.enemy;
 		Range.element = null;
-        Range.Damage = Damage;
+        Range.Damage = Damage.GetValue();
         attackArea.SetActive(false);
     }
     public override void ActionEnter(GameObject target, GameObject self)

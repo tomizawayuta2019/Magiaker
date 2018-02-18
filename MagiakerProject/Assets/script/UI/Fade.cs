@@ -37,10 +37,9 @@ public class Fade : Gimick {
     }
     void Stopfalse()
     {
-		Destroy (MainSceneManager.hoziObject);
+		//Destroy (MainSceneManager.hoziObject);
 		//フェードINした後、プレイヤーと敵が動く
         EnemyController.stop = false;
-		Debug.Log ("GameStart");
     }
     void SetValue(float alpha)
     {

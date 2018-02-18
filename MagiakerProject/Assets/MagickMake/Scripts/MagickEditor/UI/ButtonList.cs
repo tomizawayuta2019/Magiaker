@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ButtonList : MonoBehaviour {
     [SerializeField]
@@ -18,8 +19,23 @@ public class ButtonList : MonoBehaviour {
 
     protected List<MagiakerButton> buttons = new List<MagiakerButton>();//生成したボタンのリスト
 
-    private void Start() {
+    private ScrollRect scroll;
+    private float defaultHeight;
+
+    private void Awake()
+    {
+        scroll = GetComponent<ScrollRect>();
+        if (scroll) {
+            defaultHeight = scroll.content.sizeDelta.y;
+        }
+    }
+
+    protected virtual void Start() {
         if (width <= 0) width = 1;//widthは１以上のもののみ受け付ける。
+    }
+
+    protected virtual void Update() {
+        UpdateScrollView();
     }
 
     private Vector2 GetButtonPos(int num) {
@@ -44,7 +60,7 @@ public class ButtonList : MonoBehaviour {
             buttons.Add(b);
 
             b.transform.SetParent(parent);
-			b.transform.localScale = baseButton.transform.localScale;//親が小さければボタンも小さくする
+			b.transform.localScale = baseButton.transform.localScale;//新しい親の大きさに合わせてサイズ調整
             b.transform.localPosition = GetButtonPos(i);
         }
     }
@@ -55,7 +71,41 @@ public class ButtonList : MonoBehaviour {
     /// <param name="strings"></param>
     /// <param name="sprites"></param>
     /// <returns></returns>
-    protected MagiakerButton MakeButton(List<string> strings, List<Sprite> sprites) {
+    private MagiakerButton MakeButton(List<string> strings, List<Sprite> sprites) {
         return Instantiate(baseButton).Init(strings, sprites);
+    }
+
+    /// <summary>
+    /// ボタンの生成　＊後から生成する用
+    /// </summary>
+    /// <returns></returns>
+    protected MagiakerButton AddButton(List<string> strings, List<Sprite> sprites) {
+        MagiakerButton button = Instantiate(baseButton).Init(strings, sprites);
+        button.transform.SetParent(parent);
+        button.transform.localScale = Vector2.one;//親が小さければボタンも小さくする
+        button.transform.localPosition = GetButtonPos(buttons.Count);
+        buttons.Add(button);
+        return button;
+    }
+
+    protected void UpdateScrollView() {
+        if (scroll == null) return;
+        
+        if (buttons.Count > 0) {
+            MagiakerButton button = buttons[buttons.Count - 1];
+            Vector2 buttonPos = GetButtonPos(buttons.Count - 1);
+            buttonPos.y -= buttons[0].rect.sizeDelta.y / 2;
+            scroll.content.sizeDelta = new Vector2(scroll.content.sizeDelta.x, -buttonPos.y < defaultHeight ? defaultHeight : -buttonPos.y);
+            //Vector2 defPos = new Vector2(pos.x, scroll.content.sizeDelta.y / 2 - button.rect.sizeDelta.y / 2 - 165f);
+            //Vector2 defPos = new Vector2(pos.x, pos.y);
+            for (int i = 0; i < buttons.Count; i++) {
+                //buttons[i].transform.localPosition = defPos + GetButtonPos(i) - pos;
+                //buttons[i].rect.anchoredPosition = pos;
+                buttons[i].rect.localPosition = GetButtonPos(i);
+            }
+        }
+        else {
+            scroll.content.sizeDelta = new Vector2(scroll.content.sizeDelta.x, defaultHeight);
+        }
     }
 }

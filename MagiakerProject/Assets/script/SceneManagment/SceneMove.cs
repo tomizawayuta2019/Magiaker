@@ -5,7 +5,6 @@ using UnityEngine.SceneManagement;
 
 [CreateAssetMenu(menuName = "Example/SceneManage")]
 public class SceneMove : ScriptableObject {
-    public const int MainSceneNum = 2;
 
     /// <summary>
     /// シーンの読み込み
@@ -20,6 +19,7 @@ public class SceneMove : ScriptableObject {
     /// </summary>
     /// <param name="num"></param>
     public void SelectMainSceneLevel(int num) {
-        SceneManager.LoadScene(MainSceneNum);
+        //SceneManager.LoadScene(MainSceneNum);
+        MainSceneManager.StartMainScene((Level)System.Enum.ToObject(typeof(Level), num));
     }
 }

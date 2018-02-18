@@ -42,29 +42,38 @@ public class Item : MonoBehaviour
         switch (itemtype)
         {
             case Itemtype.HPHeal:
-				Player.GetComponent<PlayerController>().HP += Heal;
-                Debug.Log(itemtype);
+				Player.GetComponent<PlayerController>().HPHeal(Heal);
                 break;
             case Itemtype.MPHeal:
-				Player.GetComponent<PlayerController>().MP += Heal;
-                Debug.Log(itemtype);
+                PlayerController._MP += Heal;
                 break;
         }
+        SEManager.SetSE(MagicSystemManager.instance.SEManager.Heal);
         Destroy(gameObject);
     }
 
     //作成　針ヶ谷天紀
     private IEnumerator PlayerChase(GameObject target)
     {
+        if (target == null) {
+            target = PlayerController.instance.gameObject;
+        }
         //Playerに当たれば消えるので終了処理なし
         for (;;)
         {
-            //targetに対しての正面方向を取得する
-            Quaternion TargetRotation = Quaternion.LookRotation(target.transform.position - transform.position);
-            //targetに対して正面になるように回転させる
-            transform.rotation = Quaternion.Slerp(transform.rotation, TargetRotation, 1);
-            //オブジェクトの正面に進ませる
-            rb.MovePosition(transform.position + transform.forward * speed * Time.deltaTime);
+            try
+            {
+                //targetに対しての正面方向を取得する
+                Quaternion TargetRotation = Quaternion.LookRotation(target.transform.position - transform.position);
+                //targetに対して正面になるように回転させる
+                transform.rotation = Quaternion.Slerp(transform.rotation, TargetRotation, 1);
+                //オブジェクトの正面に進ませる
+                rb.MovePosition(transform.position + transform.forward * speed * Time.deltaTime);
+            }
+            catch {
+                Character.stop = true;
+            }
+            
             yield return null;
         }
     }

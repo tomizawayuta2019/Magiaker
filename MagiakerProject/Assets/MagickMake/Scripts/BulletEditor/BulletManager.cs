@@ -40,17 +40,30 @@ public class BulletManager : ScriptableObject {
     public void Save(Bullet bul) {
 		#if UNITY_EDITOR
         int num = isBulletExist(bul.name);
+        Debug.Log(bul.bulletObj);
+
+        //生成時に付与したいコンポーネントを削除しておく
+        if (bul.bulletObj && bul.bulletObj.GetComponent<BulletObject>())
+        {
+            Destroy(bul.bulletObj.GetComponent<BulletObject>());
+        }
+
+        Bullet prefab;
         if (num < 0)
-            Bullets
-				.Add(
-					UnityEditor.
-					PrefabUtility
-					.CreatePrefab("Assets/MagickMake/Resources/Prefabs/" + 
-						bul.name + ".prefab", 
-						bul.gameObject)
-					.GetComponent<Bullet>());
-        else
-            Bullets[num] = UnityEditor.PrefabUtility.CreatePrefab("Assets/Resources/Prefabs/" + bul.name + ".prefab", bul.gameObject).GetComponent<Bullet>();
+        {
+            prefab = UnityEditor.PrefabUtility.CreatePrefab("Assets/MagickMake/Resources/Prefabs/" + bul.name + ".prefab", bul.gameObject).GetComponent<Bullet>();
+            Bullets.Add(prefab);
+        }
+        else {
+            prefab = UnityEditor.PrefabUtility.ReplacePrefab(bul.gameObject, Bullets[num].gameObject).GetComponent<Bullet>();
+            //prefab = UnityEditor.PrefabUtility.CreatePrefab("Assets/Resources/Prefabs/" + bul.name + ".prefab", bul.gameObject).GetComponent<Bullet>();
+            Bullets[num] = prefab;
+        }
+
+        //もし弾丸の参照が外れていたら参照しなおす
+        if (prefab.bulletObj == null) {
+            prefab.bulletObj = prefab.transform.FindChild("Cube").gameObject;
+        }
 
         Debug.Log("Save");
 		#endif

@@ -12,5 +12,7 @@ public class PlayerPositionSet : MonoBehaviour
     }
 
     void Update()
-    { transform.position = Player.transform.position; }
+    {
+        transform.position = Player.transform.position;
+    }
 }

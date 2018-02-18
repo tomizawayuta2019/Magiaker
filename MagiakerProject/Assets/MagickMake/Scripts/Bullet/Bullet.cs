@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// 作成者　富澤勇太
@@ -13,9 +16,14 @@ public enum BulletType {
     homing,//追跡
     paint,//ダメージ床
     fixe,//発射者追尾
+    beam,//ビーム
+    homingExplosion,//追跡爆発
 }
 
 public class Bullet : MonoBehaviour {
+    public string BulletName;
+    public string GetBulletName() { return abnState ? BulletName + "(" + abnState.GetTypeName() + ")" : BulletName; }
+
 	private GameObject prefab,bulletObjPrefab;
     public GameObject bulletObj;//子の弾丸オブジェクト
 	public AbnState abnState;
@@ -31,7 +39,7 @@ public class Bullet : MonoBehaviour {
     [SerializeField]
     public BulletType bulletType;
     [SerializeField]
-    public int useMP = 1,damage = 2;//使用するMP量、ダメージ量
+    public int useMP = 1,damage = 2,BombDamage;//使用するMP量、ダメージ量、爆発のダメージ
 
     [SerializeField]
     private Bullet childBullet;//この弾道に連続して起動される弾道
@@ -40,6 +48,9 @@ public class Bullet : MonoBehaviour {
     public void SetChildBullet(Bullet bul) { childBullet = bul; }
     public Bullet GetParentBullet() {return parentBullet;}
     public int GetFamiryCount() { return 1 + (GetChildBullet() ? childBullet.GetFamiryCount() : 0); }
+
+    [SerializeField]
+    private Bullet pairBullet;//同時に発射する弾道
 
     [SerializeField]
     public Sprite Icon;//UIとして表示する際に使用する画像
@@ -52,6 +63,13 @@ public class Bullet : MonoBehaviour {
     void Start() {
         SetDefaultPosition();
 		InitBulletObj ();
+
+        foreach (GameObject obj in lines) {
+            if (!obj) { continue; }
+            Vector3 pos = obj.transform.localPosition;
+            pos.y = 0;
+            obj.transform.localPosition = pos;
+        }
     }
 
 	private void InitBulletObj(){
@@ -68,14 +86,17 @@ public class Bullet : MonoBehaviour {
         Icon = null;
         SetDefaultPosition();
         DeleteDrawLine();
+
+        if (pairBullet) { pairBullet.Init(); }
     }
 
     /// <summary>
     /// 弾丸基準点の再設定
     /// </summary>
     public void SetDefaultPosition() {
-		if (bulletObj)
-			defautPosition = bulletObj.transform.localPosition;
+        if (bulletObj) {
+            defautPosition = bulletObj.transform.localPosition;
+        }
     }
 
 	public Vector3 GetDefaultPos(){
@@ -96,63 +117,90 @@ public class Bullet : MonoBehaviour {
     /// 弾丸を発射する
     /// </summary>
     public void Enter(bool isTestScene = false) {
+
         isTest = isTestScene;
-
-
-		if (bulletObj == null) {
-			if (abnState == null) {
-				Debug.Log (prefab);
-				bulletObj = Instantiate (prefab.GetComponent<Bullet> ().bulletObj, transform);
-				if (!bulletObj.GetComponent<BulletObject> ()) {
-					BulletObject bulObj = bulletObj.AddComponent<BulletObject> ();
-					bulObj.parent = this;
-				}
-				Debug.Log ("Enter at Init");
-			} else
-				ChangeElement (abnState);
-		}
-
-		//弾道を自身の子にする
-		bulletObj.transform.SetParent(transform);
-
-		bulletObj.transform.localPosition = GetDefaultPos ();
-
-        Hashtable hash = new Hashtable();
-        switch (movePath.GetLength(0))
+        
+        if (abnState == null)
         {
-            case 0:
-                Debug.LogAssertion("経路が設定されていません");
-                return;
-            case 1:
-                hash.Add("position", transform.position + Rotate(movePath[0]));
+            bulletObj = Instantiate(prefab.GetComponent<Bullet>().bulletObj, transform);
+            if (!bulletObj.GetComponent<BulletObject>())
+            {
+                BulletObject bulObj = bulletObj.AddComponent<BulletObject>();
+                bulObj.parent = this;
+            }
+        }
+        else
+        {
+            ChangeElement(abnState);
+        }
+
+        //弾道を自身の子にする
+        //bulletObj.transform.SetParent(transform);
+        //bulletObj.transform.localPosition = GetDefaultPos ();
+        ReturnToDefaultPos();
+
+        switch (bulletType) {
+            case BulletType.beam:
+                StartCoroutine(WaitShotEndTime(moveTime));
+                break;
+            case BulletType.fixe:
+                StartCoroutine(WaitShotEndTime(moveTime));
+                //StartCoroutine(WaitShotEndTime(moveTime));
+                RotateBullet rotate = bulletObj.AddComponent<RotateBullet>();
+                rotate.SetTarget(GameObject.FindGameObjectWithTag(Tags.Player));
+                rotate.speed = 600;
+                rotate.SetTime(moveTime);
                 break;
             default:
-                Vector3[] path = new Vector3[movePath.Length];
-                for (int i = 0; i < path.GetLength(0); i++)
+                Hashtable hash = new Hashtable();
+                switch (movePath.GetLength(0))
                 {
-                    path[i] = transform.position + Rotate(movePath[i]);
+                    case 0:
+                        Debug.LogAssertion("経路が設定されていません");
+                        return;
+                    case 1:
+                        hash.Add("position", transform.position + Rotate(movePath[0]));
+                        break;
+                    default:
+                        Vector3[] path = new Vector3[movePath.Length];
+                        for (int i = 0; i < path.GetLength(0); i++)
+                        {
+                            path[i] = transform.position + Rotate(movePath[i]);
+                        }
+                        hash.Add("path", path);
+                        break;
                 }
-                hash.Add("path", path);
+                hash.Add("time", moveTime);
+                hash.Add("easetype", type);
+                hash.Add("oncompletetarget", gameObject);
+                hash.Add("oncomplete", "MoveEnd");
+
+                iTween.MoveTo(bulletObj, hash);
+
+                //弾道を親から外す
+                bulletObj.transform.parent = null;
                 break;
         }
-        hash.Add("time", moveTime);
 
-        hash.Add("easetype", type);
+        switch (bulletType) {
+            case BulletType.beam:
+                break;
+            default:
+                //経路予測線を消去
+                DeleteDrawLine();
 
-        hash.Add("oncompletetarget", gameObject);
-        hash.Add("oncomplete", "MoveEnd");
+                //if (!isDraw)
+                if (isTest)
+                    StartCoroutine(MovePathDraw());
+                break;
+        }
+        
 
-        iTween.MoveTo(bulletObj, hash);
+        bulletObj.GetComponent<BulletObject>().ShotStart();
 
-        //経路予測線を消去
-        DeleteDrawLine();
-
-		//弾道を親から外す
-		bulletObj.transform.parent = null;
-
-        //if (!isDraw)
-		if (isTest)
-			StartCoroutine (MovePathDraw ());
+        if (pairBullet) {
+            pairBullet.Enter(isTestScene);
+        }
     }
     
     /// <summary>
@@ -166,7 +214,7 @@ public class Bullet : MonoBehaviour {
         return x + z;
     }
 
-    const float drawFrame = 0.1f;//経路を描画する際の描画頻度
+    const float drawFrame = 0f;//経路を描画する際の描画頻度
     [SerializeField]
     private GameObject drawLine;//経路の描画に用いる２Dオブジェクトプレファブ
     [SerializeField]
@@ -213,10 +261,21 @@ public class Bullet : MonoBehaviour {
     }
 
     /// <summary>
+    /// 弾道の持続時間待機し、その後に移動終了処理を呼ぶ
+    /// </summary>
+    /// <param name="time"></param>
+    /// <returns></returns>
+    private IEnumerator WaitShotEndTime(float time) {
+        yield return new WaitForSeconds(time);
+        MoveEnd();
+    }
+
+    /// <summary>
     /// 弾丸の移動が終了した際に呼ばれる処理
     /// </summary>
     public void MoveEnd() {
         StopAllCoroutines();
+
         //弾道に続きがあるなら次の弾道を起動
         if (childBullet) {
             childBullet.bulletObj = bulletObj;
@@ -226,22 +285,55 @@ public class Bullet : MonoBehaviour {
         //テスト用のシーンなら元の場所に戻る
         else if (isTest)
         {
+            if (bulletObj)
+            {
+                BulletObject bul = bulletObj.GetComponent<BulletObject>();
+                if (bul && bul.bulletType == BulletType.explosion || bul.bulletType == BulletType.homingExplosion)
+                {
+                    bul.HitExplosion();
+                }
+            }
+
+            //ReturnToDefaultPos();
+            Destroy(bulletObj);
+            Debug.Log(prefab);
+            bulletObj = Instantiate(prefab.GetComponent<Bullet>().bulletObj);
+            ChangeElement(abnState);
             ReturnToDefaultPos();
         }
         else {
-			Destroy (bulletObj);
+            if (bulletObj) {
+                BulletObject bul = bulletObj.GetComponent<BulletObject>();
+                if (bul && bul.bulletType == BulletType.explosion || bul.bulletType == BulletType.homingExplosion) {
+                    bul.HitExplosion();
+                }
+                Destroy(bulletObj);
+            }
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>
+    /// 弾丸の移動を終了させる処理
+    /// </summary>
+    public void MoveStop() {
+        //StopAllCoroutines();
+        if (bulletObj)
+            iTween.Stop(bulletObj);
     }
 
     /// <summary>
     /// 弾丸を発射前の位置に戻す
     /// </summary>
     public void ReturnToDefaultPos() {
-		if (parentBullet)
-			parentBullet.ReturnToDefaultPos ();
-		else
-			bulletObj.transform.localPosition = GetDefaultPos ();
+        if (parentBullet) {
+            parentBullet.ReturnToDefaultPos();
+        }
+        else {
+            bulletObj.transform.SetParent(transform);
+            bulletObj.transform.localPosition = GetDefaultPos();
+        }
+			
     }
 
     /// <summary>
@@ -381,22 +473,47 @@ public class Bullet : MonoBehaviour {
 		if (bulObj) {
 			if (bulObj.elementType == type)
 				return;
-			state = MagickMakeManager.MM.abnManager.GetElement (bulObj.elementType, bulObj.element);
+			state = MagicSystemManager.instance._abnstateManager.GetElement (bulObj.elementType, bulObj.element);
 		} 
 		if (state == null)
-			state = MagickMakeManager.MM.abnManager.GetElement (MagickMakeManager.MM.selectElement);
+			state = MagicSystemManager.instance._abnstateManager.GetElement (MagickMakeManager.Instance.selectElement);
 		ChangeElement (state);
 	}
 
 	public void ChangeElement(AbnState state){
 		Destroy (bulletObj);
-
-		bulletObj = Instantiate (MagickMakeManager.MM.abnManager.GetElementPrefab (state.type), transform);
-		bulletObj.transform.localPosition = defautPosition;
-		InitBulletObj ();
+        GameObject prefab = MagicSystemManager.instance._abnstateManager.GetElementPrefab(state.type,bulletType);
+        bulletObj = Instantiate (prefab, transform);
+        //bulletObj.transform.localPosition = defautPosition;
+        bulletObj.transform.localPosition = GetDefaultPos();
+        bulletObj.transform.localEulerAngles = Vector3.zero;
+        InitBulletObj ();
 		BulletObject bulObj = bulletObj.GetComponent<BulletObject> ();
 		bulObj.element = state;
 		abnState = bulObj.element;
 		bulObj.parent = this;
+
+        if (pairBullet) {
+            pairBullet.ChangeElement(state);
+        }
 	}
+
+#if UNITY_EDITOR
+    [SerializeField]
+    public bool x, z;
+
+    [ContextMenu("MirrorBullet")]
+    public void MirrorBullet() {
+        if (!pairBullet) {
+            pairBullet = Instantiate(gameObject).GetComponent<Bullet>();
+            for (int i = 0; i < pairBullet.movePath.GetLength(0); i++) {
+                //x,z がtrueならそれを反転させる
+                pairBullet.movePath[i] = new Vector3(x ? -pairBullet.movePath[i].x : pairBullet.movePath[i].x, pairBullet.movePath[i].y, z ? -pairBullet.movePath[i].z : pairBullet.movePath[i].z);
+                pairBullet.transform.SetParent(transform);
+                pairBullet.transform.localPosition = Vector3.zero;
+                pairBullet.transform.localEulerAngles = Vector3.zero;
+            }
+        }
+    }
+#endif
 }

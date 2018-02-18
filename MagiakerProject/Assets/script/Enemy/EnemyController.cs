@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public delegate void RemoveEnemyList(EnemyController obj);
 
@@ -10,8 +11,10 @@ public class EnemyController : Character
     [SerializeField]
     private element weakType;//弱点の属性
     [SerializeField]
-	private AbnStateManager abnStateManager;
+    private AbnStateManager abnStateManager;
     public AbnormalStateManager abnManager = new AbnormalStateManager();
+    public Vector3 StateSymbolPosition;//状態異常エフェクトの表示位置
+    public Vector3 StateSymbolSize = Vector3.one;//状態異常エフェクトのサイズ
     [SerializeField]
     GameObject PlayerSensor;
     [SerializeField]
@@ -19,32 +22,61 @@ public class EnemyController : Character
     [SerializeField]
     GameObject MPItem;
     [SerializeField]
-    int HPDropPercent = 2;
+    LevelInt HPDropPercent;
     [SerializeField]
-    int MPDropPercent = 3;
+    LevelInt MPDropPercent;
     [SerializeField]
-    float HealPoint = 10;
+    LevelFloat HealPoint;
     Itemtype itemtype;
+    NavMeshAgent agent;
     Action Action;
     GameObject PC;
+    PlayerController PLController;
     GameObject Items;
     PlayerSensor Sensor;
-    Animator anim; 
-    void Start()
+    Animator anim;
+
+    public virtual void InitFlag()
     {
-		abnManager.StateSymbolMaterial = abnStateManager.AbnStateSymbol;
-        abnManager.objtransform = transform;
-        anim = GetComponent<Animator>();
-        PC = GameObject.FindGameObjectWithTag("Player");
+        Action.StopCoroutines();
+    }
+    protected override void Awake()
+    {
+        //敵に対して攻撃が二重ヒットするバグが発生中。対処として敵のHPを二倍に。
+        MAX_HP.easy *= 2;
+        MAX_HP.normal *= 2;
+        MAX_HP.hard *= 2;
+        base.Awake();
         Action = GetComponent<Action>();
+    }
+    protected virtual void Start()
+    {
+        abnManager.StateSymbolMaterial = abnStateManager.AbnStateSymbol;
+        abnManager.objtransform = transform;
+        abnManager.symbolPos = StateSymbolPosition;
+        abnManager.symbolSize = StateSymbolSize;
+        anim = GetComponent<Animator>();
+        agent = GetComponent<NavMeshAgent>();
+        PC = GameObject.FindGameObjectWithTag("Player");
+        //PLController = PC.GetComponent<PlayerController>();
+        PLController = PlayerController.instance;
+       
         Sensor = PlayerSensor.GetComponent<PlayerSensor>();
     }
-
+    private void OnEnable()
+    {
+        if(Action!=null)
+        Action.PauseEnd();
+    }
     void Update()
     {
+        if (Time.timeScale == 0)
+        {
+            return;
+        }
+
         if (stop)
         {
-
             Action.StopCoroutines();
             return;
         }
@@ -58,18 +90,24 @@ public class EnemyController : Character
         abnManager.TimeCheck(Time.deltaTime);
         float dot = abnManager.DotDamage(this, Time.deltaTime);
         if (dot != 0)
-            GetDamage(dot);
+            GetDamage(dot,transform.position);
         //状態異常による行動不能の確認　状態異常の時間経過処理をした後に確認
         if (!abnManager.isAction(this))
         {
-            Debug.Log("stop state");
-			if (Action)
-				Action.StopCoroutines ();
+            if (Action) {
+                Action.StopCoroutines();
+            }
             return;
         }
-
-		if (Sensor && Sensor.GetPL_Search())
+        //前のフレームで停止状態だったなら、いろいろ初期化する
+        else if(abnManager.IsActionStopStateEnd()) {
+            Action.PauseEnd();
+            return;
+        }
+        if (Sensor && Sensor.GetPL_Search())
         {
+            if (PLController.HP <= -1)
+            { Action.PlayerDeathStop(); }
             Action.ActionEnter(PC, gameObject);
         }
     }
@@ -79,7 +117,7 @@ public class EnemyController : Character
     /// </summary>
     /// <param name="value">受けるダメージ</param>
     /// <param name="ele">ダメージの属性</param>
-    public override void TakeAttack(float value, AbnState ele = null)
+    public override void TakeAttack(float value, Vector3 HitPosition, AbnState ele = null)
     {
         if (value <= 0) return;
 
@@ -103,14 +141,14 @@ public class EnemyController : Character
             }
         }
 
-        GetDamage(value, isWeak);
+        GetDamage(value,HitPosition, isWeak);
     }
 
     /// <summary>
     /// 状態異常を受ける処理
     /// </summary>
     /// <param name="value"></param>
-    public void TakeAbnormalState(AbnState value)
+    public virtual void TakeAbnormalState(AbnState value)
     {
         abnManager.AddAbnormalState(value);
     }
@@ -118,18 +156,26 @@ public class EnemyController : Character
     public override void Death()
     {
         base.Death();
+        Action.StopCoroutines();
         StartCoroutine(DeathStart());
     }
     private IEnumerator DeathStart()
     {
-
         gameObject.layer = Layers.Death;
+        Action.Death();
+        if (agent)
+        {
+            agent.Stop();
+            agent.velocity *= 0;
+        }
         if (anim)
         {
+            Sensor = null;
             anim.Play("Death");
             yield return null;
             yield return StartCoroutine(WaitAnimationEnd("Death"));
         }
+
         //アイテムが出るかの確立
         ItemDrop();
         //EnemySpawnリストから消す
@@ -138,25 +184,23 @@ public class EnemyController : Character
         Destroy(gameObject);
         yield break;
     }
-    void ItemDrop()
+    protected virtual void ItemDrop()
     {
-        int DropRnd = Random.Range(0, 10);
-        //0～3ならHP回復アイテム4～7はMP回復アイテム
-        if (DropRnd < HPDropPercent)
+        if (Random.Range(0,100) < HPDropPercent.GetValue())
         {
             Items = Instantiate(HPItem, transform.position, Quaternion.identity);
             Items.GetComponent<Item>().itemtype = Itemtype.HPHeal;
         }
-        if (DropRnd > 9 - MPDropPercent)
+        else if (Random.Range(0, 100) < MPDropPercent.GetValue())
         {
             Items = Instantiate(MPItem, transform.position, Quaternion.identity);
             Items.GetComponent<Item>().itemtype = Itemtype.MPHeal;
         }
         if (Items != null)
         {
-            Items.GetComponent<Item>().Heal = HealPoint;
+            Items.GetComponent<Item>().Heal = HealPoint.GetValue();
             //ItemにPlayerを登録
-            Items.GetComponent<Item>().Player = PC;
+            Items.GetComponent<Item>().Player = PlayerController.instance.gameObject;
             //アイテムを散らすように出す
             Items.GetComponent<Rigidbody>().AddForce(
                 new Vector3(0, 5, 0),
@@ -176,9 +220,10 @@ public class EnemyController : Character
             if (nowState.IsName(animatorName) && nowState.normalizedTime >= 0.9f)
             { finish = true; }
             else
-            { yield return new WaitForSeconds(0.1f); }
-
-
+            {
+                //yield return new WaitForSeconds(0.1f); 
+                yield return null;
+            }
         }
     }
 
@@ -213,7 +258,9 @@ public class EnemyController : Character
 public class AbnormalStateManager : IState
 {
     public Transform objtransform;
-    GameObject[] AbnormalStateSymbol = new GameObject[4];
+    public Vector3 symbolPos,symbolSize;
+    const int SYMBOL_COUNT = 3;
+    GameObject[,] AbnormalStateSymbol = new GameObject[4,SYMBOL_COUNT];//エフェクトが一つだと薄くて見難いので三つ重ねる
     public GameObject[] StateSymbolMaterial;
     //状態異常の配列　各種類一つずつまでしか同時に付与されない
     //状態異常の格納場所はその状態異常のenum(element)番号に依存
@@ -223,12 +270,12 @@ public class AbnormalStateManager : IState
     /// その状態異常にかかっているか否か
     /// </summary>
     /// <returns><c>true</c>, if state was ised, <c>false</c> otherwise.</returns>
-    public bool isState(element type)
+    public bool IsState(element type)
     {
         return states[(int)type].HasValue;
     }
 
-    public int debug_stateCount()
+    public int Debug_stateCount()
     {
         int i = 0;
         foreach (State? s in states)
@@ -243,12 +290,18 @@ public class AbnormalStateManager : IState
     /// <param name="state">状態異常の情報</param>
     public void AddAbnormalState(AbnState value)
     {
-        Vector3 set = objtransform.position; set.y += 1 + (int)value.type;
+        Vector3 set = objtransform.position;
+        //set.x += 0 + (int)value.type;
         //既に同じタイプの状態異常があれば、それを上書きする
-        if (!AbnormalStateSymbol[(int)value.type])
+        if (!AbnormalStateSymbol[(int)value.type,0])
         {
-			AbnormalStateSymbol [(int)value.type] = GameObject.Instantiate (StateSymbolMaterial [(int)value.type], set, Quaternion.identity);
-            AbnormalStateSymbol[(int)value.type].transform.SetParent(objtransform);
+            for (int i = 0; i < SYMBOL_COUNT; i++) {
+                AbnormalStateSymbol[(int)value.type,i] = GameObject.Instantiate(StateSymbolMaterial[(int)value.type], set, Quaternion.identity);
+                AbnormalStateSymbol[(int)value.type,i].transform.SetParent(objtransform);
+                Vector3 size = AbnormalStateSymbol[(int)value.type, i].transform.localScale;
+                AbnormalStateSymbol[(int)value.type, i].transform.localScale = new Vector3(symbolSize.x * size.x, symbolSize.y * size.y, symbolSize.z * size.z);
+                AbnormalStateSymbol[(int)value.type, i].transform.localPosition = symbolPos;
+            }
         }
         states[(int)value.type] = new State(value);
     }
@@ -268,7 +321,9 @@ public class AbnormalStateManager : IState
                 State s = states[i].Value;
                 if (!s.TimeCheck(time))
                 {
-                    GameObject.Destroy(AbnormalStateSymbol[i]);
+                    for (int j = 0; j < SYMBOL_COUNT; j++) {
+                        GameObject.Destroy(AbnormalStateSymbol[i,j]);
+                    }
                     states[i] = null;
                 }
                 else
@@ -276,13 +331,16 @@ public class AbnormalStateManager : IState
                     states[i] = s;
                 }
             }
-            if(states[i]==null&& AbnormalStateSymbol[i]!=null)
+            if (states[i] == null && AbnormalStateSymbol[i,0] != null)
             {
-                GameObject.Destroy(AbnormalStateSymbol[i]);
+                for (int j = 0; j < SYMBOL_COUNT; j++) {
+                    GameObject.Destroy(AbnormalStateSymbol[i, j]);
+                }
             }
         }
     }
 
+    private bool? isStop,nowIsStop;//停止の状態異常の前のフレームでの状態確認
     /// <summary>
     /// 行動が可能か否か
     /// </summary>
@@ -292,10 +350,24 @@ public class AbnormalStateManager : IState
     {
         for (int i = 0; i < states.Length; i++)
         {
-            if (states[i].HasValue && !states[i].Value.isAction(target))
+            if (states[i].HasValue && !states[i].Value.isAction(target)) {
+                isStop = nowIsStop;
+                nowIsStop = true;
                 return false;
+            }
+                
         }
+        isStop = nowIsStop;
+        nowIsStop = false;
         return true;
+    }
+
+    /// <summary>
+    /// 前フレームで停止の状態異常にかかっていたか isAcitonよりも前に呼び出すこと
+    /// </summary>
+    /// <returns></returns>
+    public bool IsActionStopStateEnd() {
+        return isStop == null ? false : isStop.Value;
     }
 
     /// <summary>

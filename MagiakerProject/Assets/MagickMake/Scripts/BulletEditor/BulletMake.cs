@@ -102,6 +102,7 @@ public class BulletMake : MonoBehaviour {
         //データ読み込み確認
         if (isLoadCheck) {
             GUILabel_refPosition(ref pos, 400, 20, "現在作成中のデータを破棄し、他のデータを読み込みますか？");
+            pos = GetNewLinePosition(pos);
             if(GUIButton_refPosition(ref pos,35,20,"はい")) {
                 isLoadCheck = false;
                 Destroy(bullet.gameObject);
@@ -145,14 +146,16 @@ public class BulletMake : MonoBehaviour {
             }
         }
 
+        pos = GetNewLinePosition(pos);
+
         //データ保存確認
         if (isSaveCheck) {
-            GUI.TextField(new Rect(300, 300, 360, 20), "既に同じ名前のプレファブが存在します。上書きしますか？");
-            if (GUI.Button(new Rect(300, 330, 50, 20), "はい")) {
+            GUILabel_refPosition(ref pos, 360, 20, "既に同じ名前のプレファブが存在します。上書きしますか？");
+            if (GUIButton_refPosition(ref pos, 50, 20, "はい")) {
                 isSaveCheck = false;
                 bullet.CreatePrefab();
             }
-            else if (GUI.Button(new Rect(350, 330, 50, 20), "いいえ")) {
+            else if (GUIButton_refPosition(ref pos, 50, 20, "いいえ")) {
                 isSaveCheck = false;
             }
         }

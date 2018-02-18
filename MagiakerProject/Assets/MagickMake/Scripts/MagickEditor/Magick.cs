@@ -8,7 +8,7 @@ using UnityEngine;
 [System.Serializable]
 public class Magick {
     [System.Serializable]
-    class MagickBullet {
+    public class MagickBullet {
         public MagickBullet(Bullet bul,Bullet prefab) {
             bullet = bul;
             bulletPrefab = prefab;
@@ -18,6 +18,7 @@ public class Magick {
         public Bullet bullet;
         [SerializeField]
         private Bullet bulletPrefab;
+        [SerializeField]
 		private AbnState state;
         public Vector3 position;
         public Vector3 rotation;
@@ -41,13 +42,11 @@ public class Magick {
         public void TestEnter(GameObject parent) {
 			bullet.SetPrefab(bulletPrefab.gameObject);
 			bullet.parent = parent.GetComponent<Character> ();
-			Debug.Log ("test set Parent" + bullet.parent);
             bullet.Enter(true);
         }
 
         public void Save() {
 			position = bullet.transform.localPosition;
-			Debug.Log (position);
             rotation = bullet.transform.localEulerAngles;
 			state = bullet.GetAbnState ();
         }
@@ -69,17 +68,22 @@ public class Magick {
             Bullet bulObj = Object.Instantiate(bulletPrefab.gameObject).GetComponent<Bullet>();//
             //bulObj.transform.SetParent(parent.transform);
 			bulObj.parent = parent.GetComponent<Character>();
-			Debug.Log ("setParent");
 			bulObj.transform.SetParent (parent.transform);
 			bulObj.transform.localPosition = position;
+            if (bulObj.transform.localPosition.y < 0.5f) {
+                Vector3 pos = bulObj.transform.localPosition;
+                pos.y += 0.5f;
+                bulObj.transform.localPosition = pos;
+            }
             bulObj.transform.localEulerAngles = rotation;
             bullet = bulObj;
             bullet.SetPrefab(bulletPrefab.gameObject);
-			bulObj.ChangeElement (state);
+            bulObj.ChangeElement (state);
         }
     }
 		
-    List<MagickBullet> Bullets = new List<MagickBullet>();
+    [SerializeField]
+    public List<MagickBullet> Bullets = new List<MagickBullet>();
     public string magickName;
     public Sprite magickIcon;
 
@@ -151,10 +155,13 @@ public class Magick {
     /// </summary>
     /// <returns></returns>
 	public Magick GetClone(){
-		Magick m = new Magick ();
-		m.magickIcon = magickIcon;
-		m.magickName = magickName;
-		foreach (MagickBullet mb in Bullets) {
+        Magick m = new Magick
+        {
+            magickIcon = magickIcon,
+            magickName = magickName
+        };
+
+        foreach (MagickBullet mb in Bullets) {
 			m.Bullets.Add (mb.GetClone ());
 		}
 		return m;

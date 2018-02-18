@@ -3,11 +3,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 [CreateAssetMenu(menuName = "Example/Create AbnormalState Instance")]
 public class AbnState : ScriptableObject,IState
 {
     [SerializeField]
 	public element type;//この状態異常の属性
+    public string GetTypeName() {
+        switch (type) {
+            case element.ice:
+                return "氷";
+            case element.electric:
+                return "雷";
+            case element.fire:
+            default:
+                return "炎";
+        }
+    }
+
     [SerializeField]
     public float LimitTime;//付与されてる最大時間
     [SerializeField]
@@ -29,7 +42,7 @@ public class AbnState : ScriptableObject,IState
         {
 			case element.fire: 
 				//電気の状態異常が同時にかかっていたら、効果量が増える
-				if (target.abnManager.isState (element.electric)) {
+				if (target.abnManager.IsState (element.electric)) {
 					return value * target.abnManager.states [(int)element.electric].Value.state.value;
 				}
 				return value;
@@ -64,7 +77,7 @@ public class AbnState : ScriptableObject,IState
         {
 			//電気と氷が同時に発生したら即死する
 			case element.electric:
-				return target.abnManager.isState(element.ice);//死亡フラグを返す
+				return target.abnManager.IsState(element.ice);//死亡フラグを返す
         }
         return false;
     }

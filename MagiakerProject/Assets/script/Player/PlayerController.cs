@@ -1,15 +1,18 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Item_Magic))]
 public class PlayerController : Character
 {
     //作成　佐藤 竜也
     public GameObject Player;//プレイヤー
-	[SerializeField]
-	public float MP;
-	static public float? _HP = null,_MP = null;//シーンを跨ぐ際のデータ持越し用
+    public static PlayerController instance;
+    [SerializeField]
+    public LevelFloat MAX_MP;
+    static public float _HP, _MP;//シーンを跨ぐ際のデータ持越し用
+    private static bool initFlag = true;
     [SerializeField]
     float walkSpeed;//移動速度
     [SerializeField]
@@ -21,12 +24,37 @@ public class PlayerController : Character
     [SerializeField]
     GameObject Bullet;
     [SerializeField]
-    float ShotSpeed = 30;
-
-	[SerializeField]
-	GameObject playerCamera;
+    GameObject playerCamera;
+    [SerializeField]
+    Animator anim;
+    [SerializeField]
+    OnMouse onmouse;
 
     private Item_Magic magick;
+
+
+    [SerializeField]
+    GameObject walkObj;
+
+    public static bool walknow = false;
+
+    protected override void Awake()
+    {
+        if (initFlag)
+        {
+            //max_HP = HP;
+            //max_MP = MP;
+            HP = _HP = MAX_HP.GetValue();
+            _MP = MAX_MP.GetValue();
+            initFlag = false;
+        }
+        else
+        {
+            HP = _HP;
+        }
+
+        instance = this;
+    }
 
     private void Start()
     {
@@ -34,26 +62,33 @@ public class PlayerController : Character
         //playerのRigitbody取得
         rb = Player.GetComponent<Rigidbody>();
         magick = GetComponent<Item_Magic>();
-		if (!_HP.HasValue)
-			_HP = HP;
-		else
-			HP = _HP.Value;
-		if (!_MP.HasValue)
-			_MP = MP;
-		else
-			MP = _MP.Value;
+        //anim = GetComponent<Animator>();
+    }
+
+    public static void InitState()
+    {
+        initFlag = true;
     }
 
     void Update()
     {
-		_HP = HP;
-		_MP = MP;
+        if (Time.timeScale == 0) {
+            return;
+        }
+
+        _HP = HP;
         if (!stop)
         {
-            walk(); 
-			PlayerShot();
-			AddMP ();
+            walk();
+            PlayerShot();
+            AddMP();
+            AddHP();
+
+            if (Input.GetKeyDown(KeyCode.Escape)) {
+                Menu.OpenMenu();
+            }
         }
+
     }
 
     void OnTriggerEnter(Collider other)
@@ -61,24 +96,79 @@ public class PlayerController : Character
         ItemGet(other);
     }
 
-	private void AddMP(){
-		MP += Time.deltaTime;
-	}
+    private void AddMP()
+    {
+        MPHeal(GetHealMP());
+    }
+
+    private void AddHP()
+    {
+        HPHeal(GetHealHP());
+    }
+
+    public void HPHeal(float value)
+    {
+        HP += value;
+        if (HP > MAX_HP.GetValue()) HP = MAX_HP.GetValue();
+    }
+
+    public void MPHeal(float value)
+    {
+        _MP += value;
+        if (_MP > MAX_MP.GetValue()) _MP = MAX_MP.GetValue();
+    }
+    
+
+    public LevelFloat HealMP;
+
+    private float GetHealMP()
+    {
+        switch (MainSceneManager.GetLevel())
+        {
+            case Level.normal:
+                return Time.deltaTime * HealMP.GetValue();
+            case Level.hard:
+                return Time.deltaTime * HealMP.GetValue();
+            default:
+            case Level.easy:
+                return Time.deltaTime * HealMP.GetValue();
+        }
+    }
+
+    private static float GetHealHP()
+    {
+        switch (MainSceneManager.GetLevel())
+        {
+            case Level.normal:
+                return Time.deltaTime * 0;
+            case Level.hard:
+                return Time.deltaTime * 0;
+            default:
+            case Level.easy:
+                return Time.deltaTime * 0;
+        }
+    }
 
     //作成　佐藤 竜也
     void walk()
     {
-		Vector3 CameraFoward = playerCamera.transform.forward;
-		Vector3 CameraRight = playerCamera.transform.right;
 
-		CameraFoward.y = transform.forward.y;
-		CameraRight.y = transform.right.y;
+        //カメラの前をとる
+        Vector3 CameraFoward = playerCamera.transform.forward;
+        //カメラの横をとる
+        Vector3 CameraRight = playerCamera.transform.right;
+        //Yいらないのでプレイヤーの位置にする
+        CameraFoward.y = transform.forward.y;
+        CameraRight.y = transform.right.y;
 
-		Debug.Log (CameraFoward);
-		if (Input.GetKeyDown (KeyCode.E))
-			MainSceneManager.OpenScene (ConstData.MagickMakeScene);
+        //MagickMakeSceneへ
+        if (Input.GetKeyDown(KeyCode.F4/*KeyCode.E*/))
+        {
+            MainSceneManager.OpenScene(ConstData.MagickMakeScene);
+        }
 
-        float speed;//現在のスピード
+        //現在のスピード
+        float speed;
 
         //shiftを押したときspeedをrunSpeedの値に変更
         if (Input.GetKey(KeyCode.LeftShift)) { speed = runSpeed; }
@@ -92,33 +182,45 @@ public class PlayerController : Character
         if (Input.GetKey(KeyCode.A))
         {
             //move += Vector3.left * speed * Time.deltaTime;
-			move += -CameraRight * speed;
+            move += -CameraRight * speed;
         }
         //Wを押したときmoveにzに+1を入れる
         if (Input.GetKey(KeyCode.W))
         {
             //move += Vector3.forward * speed * Time.deltaTime;
-			move += CameraFoward* speed;
+            move += CameraFoward * speed;
         }
         //Sを押したときmoveにzに-1を入れる
         if (Input.GetKey(KeyCode.S))
         {
             //move += Vector3.back * speed * Time.deltaTime;
-			move += -CameraFoward * speed;
+            move += -CameraFoward * speed;
         }
         //Dを押したときmoveにxに+1を入れる
         if (Input.GetKey(KeyCode.D))
         {
             //move += Vector3.right * speed * Time.deltaTime;
-			move += CameraRight * speed;
+            move += CameraRight * speed;
         }
+
+        //test用即死
+        //if(Input.GetKey(KeyCode.F9))
+        //{
+        //    Death();
+        //}
+
+        if (move == Vector3.zero)
+        { anim.SetBool("Move", false); }
+        else if (move != Vector3.zero)
+        { anim.SetBool("Move", true); }
+
         //移動距離を計算する
         float movedistance = (speed / Mathf.Sqrt(2.0f) * Time.deltaTime);
         RaycastHit hit;
         //自身の位置から移動方向に自身の半径+移動距離分の長さのRayを飛ばす
         if (Physics.Raycast(transform.position, move, out hit, movedistance + radius))
         {
-            Debug.Log(hit.point);
+            //Debug.Log(hit.point);
             //移動距離をClampして移動距離を制限する
             movedistance = Mathf.Clamp(movedistance, 0, hit.distance - radius > 0 ? hit.distance - radius : 0);
         }
@@ -126,6 +228,24 @@ public class PlayerController : Character
         //transform.positionを変更して移動する
         transform.position += (move.normalized * movedistance);
 
+
+
+        //歩いてる方向にplayerが向くobjを動かす
+        walkObj.transform.position = transform.position + move.normalized * 10;
+
+        //魔法うってないときに向く
+        if (!Input.GetMouseButtonDown(0) || !Input.GetKeyDown(KeyCode.Space))
+        {
+            if (gameObject.transform.position != walkObj.transform.position)
+            {
+                transform.LookAt(new Vector3(walkObj.transform.position.x, transform.position.y, walkObj.transform.position.z));
+                walknow = true;
+            }
+            else
+            {
+                walknow = false;
+            }
+        }
         //斜め移動の時moveの値を斜め用に変える
         //rb.MovePosition(transform.position + (move.normalized * (speed / Mathf.Sqrt(2.0f) * Time.deltaTime)));
 
@@ -133,56 +253,47 @@ public class PlayerController : Character
         //移動ここまで
     }
 
-	[SerializeField]
-	private AbnState defElementice;
+    [SerializeField]
+    private AbnState defElementice;
     [SerializeField]
     private AbnState defElementfai;
     //作成　針ヶ谷天紀
-	protected void PlayerShot()
+    protected void PlayerShot()
     {
-		if (Input.GetMouseButtonDown (0) || Input.GetKeyDown(KeyCode.Space)) {
-            magick.UseMagick();
-		}
-		/*
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
         {
-            GameObject Bullets = null;
-            //弾を生成する
-            Bullets = Instantiate(Bullet, transform.position, Quaternion.identity);
-            //弾に初速を与える
-            Bullets.GetComponent<Rigidbody>().AddForce(transform.forward * ShotSpeed, ForceMode.Impulse);
-            //Bullets.GetComponent<DamageScript>().aligment = aligment.player;
-            Bullets.AddComponent<AttackArea>();
-            Bullets.GetComponent<AttackArea>().aligment = aligment.player;
-            Bullets.GetComponent<AttackArea>().DestroyCheck = DamageObjDestroy;
-            Bullets.GetComponent<AttackArea>().Damage = 1;
-            Bullets.tag = Tags.Magic;
-			Bullets.GetComponent<AttackArea>().element = defElementice;
+            onmouse.MouseLook();
+            if (magick.UseMagick()) {
+                //攻撃アニメーションを再生中なら最初から再生しなおす
+                if (anim.GetCurrentAnimatorStateInfo(0).IsName("Attack"))
+                {
+                    AnimatorReplay(anim);
+                    anim.gameObject.transform.localEulerAngles = Vector3.zero;
+                }
+                else {
+                    anim.SetTrigger("Attack");
+                }
+            }
         }
-        if(Input.GetMouseButtonDown(1))
-        {
-            GameObject Bullets = null;
-            //弾を生成する
-            Bullets = Instantiate(Bullet, transform.position, Quaternion.identity);
-            //弾に初速を与える
-            Bullets.GetComponent<Rigidbody>().AddForce(transform.forward * ShotSpeed, ForceMode.Impulse);
-            //Bullets.GetComponent<DamageScript>().aligment = aligment.player;
-            Bullets.AddComponent<AttackArea>();
-            Bullets.GetComponent<AttackArea>().aligment = aligment.player;
-            Bullets.GetComponent<AttackArea>().DestroyCheck = DamageObjDestroy;
-            Bullets.GetComponent<AttackArea>().Damage = 1;
-            Bullets.tag = Tags.Magic;
-            Bullets.GetComponent<AttackArea>().element = defElementfai;
-        }*/
     }
 
-	/// <summary>
-	/// 魔法の使用
-	/// </summary>
-	/// <returns><c>true</c>, if use was magicked, <c>false</c> otherwise.</returns>
-	protected bool MagickUse(){
-		return false;
-	}
+    /// <summary>
+    /// 現在のアニメーションを最初から再生する
+    /// </summary>
+    /// <param name="animator"></param>
+    public static void AnimatorReplay(Animator animator)
+    {
+        animator.Play(animator.GetCurrentAnimatorStateInfo(0).fullPathHash, 0, 0);
+    }
+
+    /// <summary>
+    /// 魔法の使用
+    /// </summary>
+    /// <returns><c>true</c>, if use was magicked, <c>false</c> otherwise.</returns>
+    protected bool MagickUse()
+    {
+        return false;
+    }
 
     //作成　針ヶ谷天紀
     void ItemGet(Collider other)
@@ -208,5 +319,13 @@ public class PlayerController : Character
         //自身のオブジェクトを消す
         //Destroy(gameObject);
         gameObject.layer = Layers.Death;
+        anim.Play("Dead");
+        GotoResult.GameOver();
+    }
+
+    public override void TakeAttack(float value, Vector3 HitPosition, AbnState ele = null)
+    {
+        base.TakeAttack(value, HitPosition, ele);
+        SEManager.SetSE(MagicSystemManager.instance.SEManager.Damage);
     }
 }

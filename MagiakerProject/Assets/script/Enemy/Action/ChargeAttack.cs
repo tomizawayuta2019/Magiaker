@@ -8,11 +8,8 @@ public class ChargeAttack : Action
 
     Rigidbody rb;
     Vector3 targetRot;
-    [SerializeField]
-    GameObject attackArea;
-    //回転速度
-    [SerializeField]
-    float RotationSpeed = 10f;
+
+    
     //突進の時間
     [SerializeField]
     float MoveTime = 3;
@@ -22,14 +19,9 @@ public class ChargeAttack : Action
     //移動速度
     [SerializeField]
     float speed = 10;
-    [SerializeField]
-    float Damage = 10;
     AttackArea Range;
-    EnemyController EneCon;
-    bool SearchAction = true;
-    void SetSearchAction(bool set) { SearchAction = set; }
-    bool GetSearchAction() { return SearchAction; }
-    float radius = 1;
+
+
     /* bool PlayerTouch = false;
      void SetPlayerTouch(bool set) { PlayerTouch = set; }
      bool GetPlayerTouch() { return PlayerTouch; }
@@ -40,12 +32,11 @@ public class ChargeAttack : Action
 
     void Start()
     {
-        EneCon = GetComponent<EnemyController>();
         rb = GetComponent<Rigidbody>();
         Range = attackArea.GetComponent<AttackArea>();
         Range.aligment = aligment.enemy;
 		Range.element = null;
-        Range.Damage = Damage;
+        Range.Damage = Damage.GetValue();
         attackArea.SetActive(false);
     }
     

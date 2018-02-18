@@ -10,6 +10,6 @@ public interface ITakeAttack
     /// <param name="value"></param>
     /// <returns></returns>
     bool isAligment(aligment value);
-	void TakeAttack(float value, AbnState ele = null);
-    void GetDamage(float value, bool isWeak = false);
+	void TakeAttack(float value, Vector3 HitPosition, AbnState ele = null);
+    void GetDamage(float value,Vector3 hitPosition, bool isWeak = false);
 }

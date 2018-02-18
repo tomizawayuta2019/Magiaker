@@ -23,7 +23,7 @@ public class Attack : MonoBehaviour
 	/// </summary>
 	/// <param name="TargetObj">Target object.</param>
 	/// <param name="SelfObj">Self object.</param>
-    public void LetDamage(GameObject TargetObj, GameObject SelfObj)
+    public void LetDamage(GameObject TargetObj, GameObject SelfObj,Vector3 HitPosition)
     {
         Character target = TargetObj.GetComponent<Character>();
         if (target)
@@ -31,18 +31,18 @@ public class Attack : MonoBehaviour
             CharacterOnTouch = true;
             if (!target.isAligment(aligment))
             {
-                target.TakeAttack(Damage, element);
+                target.TakeAttack(Damage, HitPosition, element);
                 if (DestroyCheck)
                 { Destroy(gameObject); }
             }
         }
-        else if (SelfObj.tag == Tags.Magic && TargetObj.tag == Tags.Wall)
-        {
-            Debug.Log("magick hit is " + TargetObj.tag);
-			//MagicDestroy(TargetObj);
-			if (DestroyCheck)
-				Destroy (gameObject);
-		}
+  //      else if (SelfObj.tag == Tags.Magic&& TargetObj.tag == Tags.Wall)
+  //      {
+  //          Debug.Log("magick hit is " + TargetObj.tag);
+		//	//MagicDestroy(TargetObj);
+		//	if (DestroyCheck)
+		//		Destroy (gameObject);
+		//}
     }
 
 	/// <summary>

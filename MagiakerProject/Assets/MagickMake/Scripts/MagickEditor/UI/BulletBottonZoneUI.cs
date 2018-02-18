@@ -10,12 +10,18 @@ using UnityEngine.UI;
 public class BulletBottonZoneUI : ButtonList {
     [SerializeField]
     public MagickMakeManager magickManager;
-	[SerializeField]
-	private element selectElement;
-	[SerializeField]
-	private Image bulletFrame;
+    [SerializeField]
+    private element selectElement;
+    [SerializeField]
+    private Image bulletFrame;
 
-    private void Start() {
+    [System.Serializable]
+    private class Folders : ElementValue<GameObject> { }
+    [SerializeField]
+    private Folders folders;
+
+    protected override void Start() {
+        base.Start();
         InitBulletButton();
 		ElementButtonClick (1);
     }
@@ -31,8 +37,8 @@ public class BulletBottonZoneUI : ButtonList {
 		List<string> str;
 		List<Sprite> spr;
 		foreach (Bullet bul in magickManager.bulletManager.Bullets) {
-			str = new List<string> (){ bul.name };
-			spr = new List<Sprite> ();
+			str = new List<string> (){ bul.GetBulletName() };
+			spr = new List<Sprite>() { bul.Icon };
 
 			strings.Add (str);
 			sprites.Add (spr);
@@ -59,8 +65,8 @@ public class BulletBottonZoneUI : ButtonList {
 	/// <param name="num">属性のボタン</param>
 	public void ElementButtonClick(int num) {
 		element ele = (element)System.Enum.ToObject (typeof(element), num);
-		bulletFrame.color = ConstData.GetElementColor (ele);
+		//bulletFrame.color = ConstData.GetElementColor (ele);
 		magickManager.SetElement (ele);
-
+        folders.GetValue(ele).transform.SetSiblingIndex(2);
 	}
 }

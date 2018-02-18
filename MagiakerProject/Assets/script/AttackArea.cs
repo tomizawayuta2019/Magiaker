@@ -19,23 +19,25 @@ public class AttackArea : Attack
 		//無事にCharacterが見つかったら、Characterから設定を読み込む
 		if (character)
 			DestroyCheck = character.DamageObjDestroy;
-		else
-			Debug.Log (gameObject.name + "が自身の親Characterを発見出来ませんでした。");
+		//else
+		//	Debug.Log (gameObject.name + "が自身の親Characterを発見出来ませんでした。");
     }
 
-	protected void OnTriggerEnter(Collider other)
+	protected virtual void OnTriggerEnter(Collider other)
     {
+        //Debug.Log(name);
         Character target = other.gameObject.GetComponent<Character>();
         if (target)
         {
             CharacterOnTouch = true;
             TouchChar = target.tag;
         }
-        LetDamage(other.gameObject, gameObject);
+        LetDamage(other.gameObject, gameObject, other.ClosestPointOnBounds(transform.position));
     }
 
-	private void OnTriggerStay(Collider other)
+	protected virtual void OnTriggerStay(Collider other)
     {
+        //Debug.Log(name);
         Character target = other.gameObject.GetComponent<Character>();
         if (target)
         {

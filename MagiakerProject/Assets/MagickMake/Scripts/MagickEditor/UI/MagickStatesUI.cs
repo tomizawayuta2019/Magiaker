@@ -52,7 +52,11 @@ public class MagickStatesUI : MonoBehaviour {
         if (targetMP != SelectedMagick.GetMP) {
 			targetMP = SelectedMagick.GetMP;
 			MP.text = targetMP.ToString();
-        }        
+        }
+
+        if (Icon.sprite != SelectedMagick.magickIcon) {
+            Icon.sprite = SelectedMagick.magickIcon;
+        }
     }
 
     /// <summary>

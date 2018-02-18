@@ -9,4 +9,14 @@ public class BOSS : EnemyController {
 		GotoResult.InitGotoResult ();
 		base.Death ();
 	}
+
+    protected override void ItemDrop()
+    {
+        //ボスはアイテムを落とさないので空
+    }
+
+    public override void TakeAbnormalState(AbnState value)
+    {
+        //ボスは状態異常を無効化するので空
+    }
 }

@@ -1,0 +1,186 @@
+fileFormatVersion: 2
+guid: d4b1f69230fd239498c261ac7ee610be
+timeCreated: 1513832317
+licenseType: Pro
+ModelImporter:
+  serializedVersion: 19
+  fileIDToRecycleName:
+    100000: achamos
+    100002: //RootNode
+    100004: body
+    100006: Chest
+    100008: happa_L
+    100010: happa_L1
+    100012: Hips
+    100014: L_Foot
+    100016: L_hand
+    100018: L_UpperArm
+    100020: leg_L
+    100022: leg_R
+    100024: me_L
+    100026: Neck
+    100028: R_foot
+    100030: R_hand
+    100032: R_UpperArm
+    100034: Reference
+    400000: achamos
+    400002: //RootNode
+    400004: body
+    400006: Chest
+    400008: happa_L
+    400010: happa_L1
+    400012: Hips
+    400014: L_Foot
+    400016: L_hand
+    400018: L_UpperArm
+    400020: leg_L
+    400022: leg_R
+    400024: me_L
+    400026: Neck
+    400028: R_foot
+    400030: R_hand
+    400032: R_UpperArm
+    400034: Reference
+    2300000: happa_L1
+    3300000: happa_L1
+    4300000: body
+    4300002: leg_R
+    4300004: leg_L
+    4300006: happa_L1
+    7400000: Dead
+    9500000: //RootNode
+    13700000: body
+    13700002: leg_L
+    13700004: leg_R
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Dead
+      takeName: Take 001
+      firstFrame: 1
+      lastFrame: 75
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: achamos
+        weight: 1
+      - path: achamos/body
+        weight: 1
+      - path: achamos/happa_L
+        weight: 1
+      - path: achamos/leg_L
+        weight: 1
+      - path: achamos/leg_R
+        weight: 1
+      - path: achamos/me_L
+        weight: 1
+      - path: Reference
+        weight: 1
+      - path: Reference/Hips
+        weight: 1
+      - path: Reference/Hips/Chest
+        weight: 1
+      - path: Reference/Hips/Chest/L_UpperArm
+        weight: 1
+      - path: Reference/Hips/Chest/L_UpperArm/L_hand
+        weight: 1
+      - path: Reference/Hips/Chest/Neck
+        weight: 1
+      - path: Reference/Hips/Chest/Neck/happa_L1
+        weight: 1
+      - path: Reference/Hips/Chest/R_UpperArm
+        weight: 1
+      - path: Reference/Hips/Chest/R_UpperArm/R_hand
+        weight: 1
+      - path: Reference/Hips/L_Foot
+        weight: 1
+      - path: Reference/Hips/R_foot
+        weight: 1
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importBlendShapes: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

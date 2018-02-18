@@ -17,11 +17,9 @@ public enum BulletState {
 /// <summary>
 /// 作成者　富澤勇太
 /// </summary>
-public class MagickMakeManager : MonoBehaviour {
+public class MagickMakeManager : SingletonMonoBehaviour<MagickMakeManager> {
     [SerializeField]
     public BulletManager bulletManager;
-	[SerializeField]
-	public AbnStateManager abnManager;
 
     //public Vector3 bulletDefaultPosition;
     public Transform BulletParent;
@@ -34,6 +32,8 @@ public class MagickMakeManager : MonoBehaviour {
 	static public int selectNum;
     [SerializeField]
     private GameObject selectImage;
+    [SerializeField]
+    private bool isEditing;
 
     [SerializeField]
 	private Bullet selectBullet{ 
@@ -50,14 +50,14 @@ public class MagickMakeManager : MonoBehaviour {
     private BulletState state;//弾道を選択している間の弾道の挙動（移動する・回転する等）
     [SerializeField]
     private Text BulletNameText;
+    [SerializeField]
+    private string defaultText;
 
 	[SerializeField]
 	public element selectElement;
 
-    static public MagickMakeManager MM;
 
-	void Start(){
-		MM = this;
+    void Start(){
 		MagickStatesUI.magickStatesUI.SetMagick (magick);
 	}
 
@@ -72,16 +72,27 @@ public class MagickMakeManager : MonoBehaviour {
 
     void Update()
     {
+        if (MagickIconManager.instance || MagicSaveCheckWindow.Instance) {
+            return;
+        }
+
         bool isLeftButtonDown = Input.GetMouseButtonDown(0);
-        BulletNameText.text = selectBullet ? selectBullet.name : " ";
+        BulletNameText.text = selectBullet ? selectBullet.GetBulletName() : defaultText;
+
+        MaskingCamera.instance.Active(false);
+
         //弾道の移動・回転
-		if (nowSelectBullet) {
+        if (nowSelectBullet)
+        {
             switch (state)
             {
                 case BulletState.move:
+                    MaskingCamera.instance.Active(true);
                     if (isLeftButtonDown)
                         BulletMoveEnter();
-                    else BulletMove(selectBullet);
+                    else if (MaskingCamera.instance.isMaskingSpot) {
+                        BulletMove(selectBullet);
+                    } 
                     break;
                 case BulletState.rotate:
                     if (isLeftButtonDown)
@@ -92,29 +103,45 @@ public class MagickMakeManager : MonoBehaviour {
             }
         }
         //弾道の選択
-        else if(Input.GetMouseButtonDown(0)) {
+        else if (isLeftButtonDown && MaskingCamera.instance.isMaskingSpot)
+        {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-			if (Physics.Raycast(ray, out hit,Mathf.Infinity,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Collide)) {//メニューで選択した弾道を優先的にhitさせるようにレイヤーを分ける（予定）
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
+            {
+                
                 GameObject hitObj = hit.transform.gameObject;
                 BulletObject hitBullet = hitObj.GetComponent<BulletObject>();
-                if (hitBullet) {
+                if (hitBullet)
+                {
                     BulletSelect(hitBullet.parent);
                 }
             }
         }
 
         //プレビュー
-        if (Input.GetKeyDown(KeyCode.R)) {
+        if (Input.GetKeyDown(KeyCode.F5)) {
             MagickEnter();
         }
 
         //テスト用 シーン終了
-		if (Input.GetKeyDown(KeyCode.E)){
-			MainSceneManager.CloseScene ();
+		if (Input.GetKeyDown(KeyCode.F4)){
+            CloseScene();
 		}
             //SceneManager.LoadScene(2);
+    }
+
+    /// <summary>
+    /// 魔法作成の終了
+    /// </summary>
+    /// <param name="isOK">魔法編集中でも終了してよいか否か</param>
+    public void CloseScene(bool isOK = false) {
+        if (!isOK && isEditing) {
+            MagicSaveCheckWindow.SaveCheck(MagicSaveCheckWindow.CheckType.close);
+            return;
+        }
+        MainSceneManager.CloseScene();
     }
 
 	/// <summary>
@@ -131,6 +158,7 @@ public class MagickMakeManager : MonoBehaviour {
     /// <param name="bul">弾道のプレファブ</param>
     public void BulletInit(Bullet bul) {
         Bullet bulObj = Instantiate(bul, BulletParent.position, Quaternion.identity);
+        bulObj.name = bul.name;
         bulObj.transform.SetParent(BulletParent);
 		bulObj.SetPrefab (bul.gameObject);
 		bulObj.ChangeElement (selectElement);
@@ -146,6 +174,14 @@ public class MagickMakeManager : MonoBehaviour {
         selectBullet = bul;
         state = BulletState.move;
         selectBullet.SetBulletObjEnabled(false);
+
+        switch (bul.bulletType) {
+            case BulletType.fixe:
+                bul.DeleteDrawLine();
+                break;
+        }
+
+        isEditing = true;
     }
 
     /// <summary>
@@ -164,7 +200,11 @@ public class MagickMakeManager : MonoBehaviour {
     /// </summary>
     /// <param name="bul"></param>
     private void BulletMove(Bullet bul) {
-        bul.transform.position = GetMousePosToWorldPos();
+        //float distance = 5.0f;
+        Vector3 pos = GetMousePosToWorldPos();
+        //pos.x = Mathf.Clamp(pos.x, BulletParent.transform.position.x - distance, BulletParent.transform.position.x + distance);
+        //pos.z = Mathf.Clamp(pos.z, BulletParent.transform.position.z - distance, BulletParent.transform.position.z + distance);
+        bul.transform.position = pos;
     }
 
     /// <summary>
@@ -225,6 +265,12 @@ public class MagickMakeManager : MonoBehaviour {
 
     }
 
+    /// <summary>
+    /// 魔法を選択する処理
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="num"></param>
+    /// <param name="button"></param>
     public void MagicSelect(MagickButtonZoneUI.TargetType type, int num, GameObject button = null) {
         selectType = type;
         selectNum = num;
@@ -244,33 +290,43 @@ public class MagickMakeManager : MonoBehaviour {
     /// 魔法の保存
     /// </summary>
 	public void SaveMagick() {
-		if (selectType == MagickButtonZoneUI.TargetType.have) {
+        if (selectType == MagickButtonZoneUI.TargetType.have)
+        {
             magick.Save();
-			Item_Magic.m_Magicks [selectNum] = magick.GetClone ();
-		}
+            Item_Magic.m_Magicks[selectNum] = magick.GetClone();
+            //このゲーム中に保存した魔法として保存
+            CreatedMagickData.AddSaveMagick(magick.GetClone());
+            isEditing = false;
+        }
+        else {
+            Debug.LogAssertion("魔法の保存先を指定してください");
+        }
     }
 
 	/// <summary>
 	/// 魔法のロード
 	/// </summary>
 	/// <param name="value">Value.</param>
-	public void LoadMagick(){
+	public void LoadMagick(bool isOK){
+        if (!isOK && isEditing) {
+            MagicSaveCheckWindow.SaveCheck(MagicSaveCheckWindow.CheckType.load);
+            return;
+        }
+
         Magick m = null;
         switch (selectType) {
             case MagickButtonZoneUI.TargetType.created:
-                m = CreatedMagickData.CreatedMagicks[selectNum];
-                //もし未設定なら新しい魔法を生成する
+                m = CreatedMagickData.magickList[selectNum];
                 break;
             case MagickButtonZoneUI.TargetType.have:
                 m = Item_Magic.m_Magicks[selectNum];
                 break;
         }
+        //もし未設定なら新しい魔法を生成する
         if (m == null) {
             m = new Magick();
-            Debug.Log("magick = null");
         } 
 
-        Debug.Log("data load");
 
         //現在編集中の魔法を破棄する
         magick.Delete();
@@ -281,5 +337,25 @@ public class MagickMakeManager : MonoBehaviour {
 
 		//魔法ステータス表示を更新する
 		MagickStatesUI.magickStatesUI.SetMagick(magick);
+
+        isEditing = false;
+    }
+
+    /// <summary>
+    /// 作成中魔法のリセット
+    /// </summary>
+    /// <param name="isOK">編集中の魔法を破棄してよいか否か</param>
+    public void ResetMagick(bool isOK = false)
+    {
+        if (!isOK && isEditing) {
+            MagicSaveCheckWindow.SaveCheck(MagicSaveCheckWindow.CheckType.reset);
+            return;
+        }
+
+        magick.Delete();
+        magick = new Magick();
+
+        MagickStatesUI.magickStatesUI.SetMagick(magick);
+        isEditing = false;
     }
 }
